@@ -1,0 +1,18 @@
+import puppeteer from 'puppeteer-core';
+const b = await puppeteer.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+const p = await b.newPage();
+await p.setViewport({ width: 1366, height: 657 });
+const errs = [];
+p.on('pageerror', e => errs.push('pageerror: ' + e.message));
+p.on('console', m => { if (m.type() === 'error') errs.push('error: ' + m.text()); });
+await p.goto(process.argv[2] || 'http://localhost:5173/', { waitUntil: 'networkidle0', timeout: 60000 });
+await p.waitForSelector('.xterm-helper-textarea');
+await p.focus('.xterm-helper-textarea');
+await p.keyboard.type('git status'); await p.keyboard.press('Enter');
+await new Promise(r => setTimeout(r, 1000));
+await p.click('[data-path="/project/index.html"]');
+await new Promise(r => setTimeout(r, 1500));
+console.log('editor:', !!(await p.$('.monaco-editor .view-lines')), '| tasks panel:', await p.$eval('.task.current .title', e => e.textContent));
+if (process.argv[3]) await p.screenshot({ path: process.argv[3] });
+console.log(errs.length ? errs.join('\n') : 'no errors');
+await b.close();

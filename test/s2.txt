@@ -1,0 +1,34 @@
+git config --global user.name "Sara Haddad"
+git config --global user.email sara@example.com
+git init
+git add -A
+git commit -m "First commit"
+@sed /project/index.html|<h1>Study Planner</h1>|<h1>My Study Planner</h1>
+@sed /project/style.css|  padding: 24px;|  padding: 32px;
+git status
+git diff
+git add index.html
+git status
+git diff --staged
+git commit -m "Change heading"
+git show
+git restore style.css
+git status
+touch secret.env
+git status
+echo "secret.env" > .gitignore
+git status
+git add .gitignore
+git commit -m "Ignore secrets"
+git branch
+git switch -c dark-mode
+@sed /project/style.css|  background: #f4f4f4;|  background: #1e1e1e;
+git commit -am "Dark background"
+git switch main
+cat style.css
+git merge dark-mode
+git branch -d dark-mode
+git log --oneline
+git statsu
+git stash
+git commit

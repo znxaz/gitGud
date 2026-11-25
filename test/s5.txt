@@ -1,0 +1,20 @@
+git config --global user.name "S"
+git config --global user.email s@x
+git init
+git add .
+git commit -m "First"
+git switch -c feature
+echo a > a.txt
+git add a.txt
+git commit -m "Feature A"
+git switch main
+echo b > b.txt
+git add b.txt
+git commit -m "Main B"
+git merge feature
+git log --oneline --graph
+echo c > c.txt
+git add c.txt
+git commit -m "C"
+git log --graph
+git log --oneline

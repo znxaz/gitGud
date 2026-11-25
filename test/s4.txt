@@ -1,0 +1,11 @@
+git config --global user.name "S"
+git config --global user.email s@x
+git init
+git add index.html
+git status
+git commit -m one
+git log --oneline
+@sed /project/style.css|  padding: 24px;|  padding: 32px;  
+git diff
+git checkout -b feature
+git branch

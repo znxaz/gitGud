@@ -1,0 +1,40 @@
+git config --global user.name "Sara Haddad"
+git config --global user.email sara@example.com
+git init
+git add -A
+git commit -m "First commit"
+git push
+git remote add origin /remote/origin.git
+git remote -v
+git push
+git push -u origin main
+git status
+@sed /project/README.md|A small web page|A small page
+git commit -am "Shorter README"
+@teammate
+git push
+git pull
+git log --oneline
+git push
+git status
+@teammate
+@sed /project/index.html|<footer>Made by the CS lab group. Updated by the team.</footer>|<footer>Built by Sara.</footer>
+git commit -am "My footer"
+git pull
+git status
+cat index.html
+git commit -m "x"
+git diff
+@sed /project/index.html|<<<<<<< HEAD\n  <footer>Built by Sara.</footer>\n=======\n|
+git add index.html
+git status
+git commit
+git log --oneline
+git log -3
+git push
+git branch -a
+cd ~
+git clone /remote/origin.git copy
+cd copy
+git log --oneline
+git status
