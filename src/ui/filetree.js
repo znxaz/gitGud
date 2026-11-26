@@ -1,4 +1,4 @@
-import { readdirSafe, stat, exists, PROJECT } from '../vfs.js';
+import { readdirSafe, stat, exists, isDir, mkdirp, writeText, dirname, join, PROJECT } from '../vfs.js';
 
 const KEY = 'git-lab:tree-open';
 const CHEVRON = '<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M5.7 13.7 5 13l4.6-4.6L5 3.7l.7-.7 5.3 5.3-5.3 5.4Z"/></svg>';
@@ -15,10 +15,12 @@ const extClass = name => {
 const extLabel = name => ({ html: '<>', css: '#', js: 'JS', md: 'M↓' }[extClass(name)] || '');
 
 export class FileTree {
-  constructor(el, { onOpen }) {
+  constructor(el, { onOpen, onCreate }) {
     this.el = el;
     this.onOpen = onOpen;
+    this.onCreate = onCreate;
     this.activePath = null;
+    this.selectedDir = PROJECT; // where New File puts the file
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(KEY)); } catch { /* none */ }
     this.open = new Set(saved || [PROJECT]);
@@ -38,13 +40,93 @@ export class FileTree {
     if (!row) return;
     const path = row.dataset.path;
     if (row.dataset.kind === 'dir') {
+      this.selectedDir = path;
       if (this.open.has(path)) this.open.delete(path); else this.open.add(path);
       this.saveOpen();
       await this.refresh();
       this.el.querySelector(`[data-path="${CSS.escape(path)}"]`)?.focus();
     } else if (row.dataset.kind === 'file') {
+      this.selectedDir = dirname(path);
       this.onOpen(path);
     }
+  }
+
+  // ---------- New File ----------
+
+  // Show a name box inside the selected folder, like VS Code's New File.
+  async startNewFile() {
+    let dir = this.selectedDir;
+    if (!(await isDir(dir))) dir = (await isDir(PROJECT)) ? PROJECT : '/';
+    if (dir !== '/') { this.open.add(dir); this.saveOpen(); }
+    await this.refresh();
+
+    const depth = dir === '/' ? 0 : dir.split('/').filter(Boolean).length;
+    const row = document.createElement('div');
+    row.className = 'tree-row editing';
+    row.style.paddingLeft = `${8 + depth * 12}px`;
+    const spacer = document.createElement('span');
+    spacer.className = 'twistie';
+    const input = document.createElement('input');
+    input.className = 'tree-input';
+    input.type = 'text';
+    input.id = 'new-file-name';
+    input.setAttribute('aria-label', `New file name in ${dir}`);
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+    row.append(spacer, input);
+    const msg = document.createElement('div');
+    msg.className = 'tree-msg';
+    msg.style.marginLeft = `${8 + depth * 12 + 16}px`;
+    msg.hidden = true;
+
+    // Put the box first inside the folder, or at the top for the root.
+    const folderRow = dir === '/' ? null : this.el.querySelector(`.tree-row[data-path="${CSS.escape(dir)}"]`);
+    if (folderRow) folderRow.after(row, msg);
+    else this.el.prepend(row, msg);
+    input.focus();
+
+    let done = false;
+    const finish = () => { done = true; row.remove(); msg.remove(); };
+    const check = async () => {
+      const name = input.value.trim();
+      if (!name) return null;
+      if (/[\\:*?"<>|]/.test(name)) return 'A file name cannot contain \\ : * ? " < > |';
+      const parts = name.split('/').filter(Boolean);
+      if (!parts.length || name.startsWith('/')) return 'Type a file name, for example notes.txt';
+      if (parts.some(p => p === '.' || p === '..')) return 'A file name cannot be . or ..';
+      if (parts.includes('.git')) return 'Git uses the name .git. Choose another name.';
+      if (await exists(join(dir, name))) return `A file or folder called ${name} is already here.`;
+      return '';
+    };
+    const create = async () => {
+      if (done) return;
+      const problem = await check();
+      if (problem === null) { finish(); return; }
+      if (problem) { msg.textContent = problem; msg.hidden = false; input.focus(); return; }
+      const path = join(dir, input.value.trim());
+      finish();
+      await mkdirp(dirname(path));
+      await writeText(path, '');
+      // Expand every folder down to the new file so it is visible.
+      for (let d = dirname(path); d !== '/' && !this.open.has(d); d = dirname(d)) this.open.add(d);
+      this.saveOpen();
+      await this.refresh();
+      await this.onCreate(path);
+    };
+    input.addEventListener('keydown', e => {
+      e.stopPropagation(); // the tree's own Enter handling must not run
+      if (e.key === 'Enter') { e.preventDefault(); create(); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(); }
+    });
+    input.addEventListener('input', () => { msg.hidden = true; });
+    input.addEventListener('blur', () => {
+      // Clicking away creates the file if the name is good, otherwise cancels.
+      setTimeout(async () => {
+        if (done) return;
+        const problem = await check();
+        if (problem) finish(); else create();
+      }, 0);
+    });
   }
 
   setActive(path) {

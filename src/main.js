@@ -25,7 +25,16 @@ async function start() {
   let panel = null;
   const runner = new TaskRunner(ids => panel && panel.completed(ids));
 
-  const tree = new FileTree($('tree'), { onOpen: path => editors.open(path) });
+  const tree = new FileTree($('tree'), {
+    onOpen: path => editors.open(path),
+    // A file made with the New File button: save it, open it, update the strip and tasks.
+    onCreate: async path => {
+      await flush();
+      await editors.open(path);
+      await refreshState();
+    },
+  });
+  $('btn-new-file').addEventListener('click', () => tree.startNewFile());
 
   const editors = new Editors({
     container: $('editor'),
