@@ -27,6 +27,18 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+  // The page itself: network first, so a new deploy shows on the next load.
+  // Offline, fall back to the cached copy.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./', copy)); }
+        return res;
+      }).catch(() => caches.match('./'))
+    );
+    return;
+  }
+  // Scripts, styles and fonts have content hashes in their names, so the cache is safe.
   event.respondWith(
     caches.match(event.request, { ignoreSearch: true }).then(hit => hit ||
       fetch(event.request).then(res => {
